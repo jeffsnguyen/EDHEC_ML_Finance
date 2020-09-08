@@ -70,5 +70,5 @@ def is_normal(r, level = .01): # 1% level of confidence
     # Applies the Jarque-Bera test to determine if a Series is normal or not
     # Test is applied at the 1% level by default
     # Returns True if the hypothesis of normality is accepted, False otherwise
-    statistic, p_value = scipy.stat.jarque_bera(r)
+    statistic, p_value = scipy.stats.jarque_bera(r)
     return p_value > level
