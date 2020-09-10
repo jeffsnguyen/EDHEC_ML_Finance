@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt #import matplotlib
 import scipy.stats
+from scipy.stats import norm
 
 # Drawdown function
 def drawdown(return_series: pd.Series):
@@ -37,6 +38,13 @@ def get_hfi_returns():
     hfi  = hfi/100
     hfi.index = hfi.index.to_period('M')
     return hfi
+
+# Semi deviation
+# Returns the semideviation aka negative semideviation of r
+# r must be a Series or DataFrame
+def semideviation(r):
+    is_negative = r <0
+    return r[is_negative].std[ddof = 0]
 
 # Skewness of a set of returns
 # Formula: S(R) = E[R-E(R))^3] / stdev_R^3
@@ -72,3 +80,35 @@ def is_normal(r, level = .01): # 1% level of confidence
     # Returns True if the hypothesis of normality is accepted, False otherwise
     statistic, p_value = scipy.stats.jarque_bera(r)
     return p_value > level
+
+# VaR Historic
+def var_historic(r, level = 5):
+    if isinstance(r, pd.DataFrame): # if r is a DataFrame, return true, else false
+        return r.aggregate(var_historic, level = level) # call var_historic on every column of the data frame
+                                                        # => become a series, move to elif below
+    elif isinstance(r, pd.Series):
+        return np.percentile(r, level)
+    else:
+        raise TypeError('Expected r to be Series or DataFrame')
+
+# Return the Parametric Gaussian VaR of a Series or Data Frame
+def var_gaussian(r, level = 5, modified = False):
+    # compute the z-score and assuming it was Gaussian
+    z = norm.ppf(level/100)
+    if modified:
+        # Modify the z-score based on observed skewness and kurtosis
+        s = skewness(r)
+        k = kurtosis(r)
+        z = (z + (z**2 - 1)/6 + (z**3 - 3*z)*(k-3)/24 - (2*z**3 - 5*z)(s**2)/36)
+    return -(r.mean() + z*r.std(ddof = 0))
+
+
+# Compute the Conditional VaR of Series or Data Frame
+def cvar_historic(r, level = 5)
+    if isinstance(r, pd.Series):
+        is_beyond = r <= -var_historic(r, level = level) # find all returns that are less than historic var
+        return -r[is_beyond].mean() # get conditional mean
+    elif isinstance(r, pd.DataFrame):
+        return r.aggregate(cvar_historic, level = level)
+    else:
+        raise TypeError('Expected r to be a Series or DataFrame')
